@@ -68,7 +68,7 @@ function fedora_object_types() {
   $types = &drupal_static(__FUNCTION__);
   
   if (empty($types)) {
-    $types('generic') = (object)array(
+    $types['generic'] = (object)array(
       'type' => 'generic',
       'name' => 'Generic Fedora Object',
       'description' => t('A standard Fedora Commons repository object.'),

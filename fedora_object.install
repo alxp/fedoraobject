@@ -84,7 +84,7 @@ function fedora_object_schema() {
     'indexes' => array(
       'pid' => array('pid'),
     ),
-    'primary_key' => array('pid'),
+    'primary_key' => array('vid'),
     'foreign_keys' => array(
       'fedora_object' => array(
         'table' => 'fedora_object',
