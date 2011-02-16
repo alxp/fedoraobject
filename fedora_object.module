@@ -1,0 +1,362 @@
+<?php
+
+/**
+ * @file
+ * Defines the Drupal Entity that represents an object in a Fedora Commons repository
+ */
+
+/**
+ * Implements hook_entity_info.
+ */
+function fedora_object_entity_info() {
+  $return['fedora_object'] = array(
+    'label' => 'Fedora Object',
+    'controller class' => 'FedoraObjectController',
+    'uri_callback' => 'fedora_object_uri',
+    'fieldable' => TRUE,
+    'entity keys' => array(
+      'id' => 'pid',
+      'revision' => 'vid',
+      'bundle' => 'type',
+      'label' => 'title',
+    ),
+    'bundle keys' => array(
+      'bundle' => 'type',
+    ),
+    'static cache' => FALSE,
+    'bundles' => array(),
+    'view modes' => array(
+      'full' => array(
+        'label' => t('Full content'),
+        'custom settings' => FALSE,
+      ),
+      'teaser' => array(
+        'label' => t('Images'),
+        'custom settings' => FALSE,
+      ),
+    ),
+  );
+  
+  foreach (fedora_object_types() as $type => $info) {
+    $return['fedora_object']['bundles']['type'][$type] = array(
+      'label' => $info->name,
+      'admin' => array(
+        'path' => 'admin/structure/fedora_objects/manage/%fedora_object_type',
+        'real_path' => 'admin/structure/fedora_objects/manage/' .
+          str_replace('_', '-', $type),
+        'bundle argument' => 4,
+        'access arguments' => array('administer fedora objects'),
+      ),
+    );
+  }
+  
+  return $return;
+}
+
+/**
+ * Generate the URI for a given Fedora Object
+ * @param object $fedora_object
+ * @return string
+ */
+function fedora_object_uri($fedora_object) {
+  return array(
+    'path' => 'fedora/object/' . $fedora_object->pid,
+  );
+}
+
+function fedora_object_types() {
+  $types = &drupal_static(__FUNCTION__);
+  
+  if (empty($types)) {
+    $types('generic') = (object)array(
+      'type' => 'generic',
+      'name' => 'Generic Fedora Object',
+      'description' => t('A standard Fedora Commons repository object.'),
+    );
+  }
+  return $types;
+}
+
+function fedora_object_type_load($type) {
+  $types = fedora_object_types();
+  $type = str_replace('_', '-', $type);
+  return isset($types[$type]) ? $types[$type] : FALSE;
+}
+
+function fedora_object_menu() {
+  $items['admin/structure/fedora_objects'] = array(
+    'title' => 'Manage feoddra objects',
+    'description' => 'Manage fedora objects',
+    'page callback' => 'fedora_object_overview_types',
+    'access arguments' => array('administer fedora objects'),
+  );
+  $items['admin/structure/fedora_objects/manage/%fedora_object_type'] = array(
+    'title' => 'View fedora object type',
+    'title callback' => 'fedora_object_type_page_title',
+    'title arguments' => array(4),
+    'page callback' => 'fedora_object_information',
+    'page arguments' => array(4),
+    'access arguments' => array('administer fedora objects'),
+  );
+  $items['admin/structure/fedora_objects/manage/%fedora_object_type/view'] = array(
+    'title' => 'View',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+  $items['fedora_object/add'] = array(
+    'title' => 'Add new fedora object',
+    'page callback' => 'fedora_object_add_page',
+    'access arguments' => array('create fedora objects'),
+    'weight' => 1,
+    'menu_name' => 'manaagement',
+    'file' => 'fedora_object.pages.inc',
+  );
+  foreach (fedora_object_types() as $type) {
+    $type_url_str = str_replace('_', '-', $type->type);
+    $items['fedora_object/add/' . $type_url_str] = array(
+      'title' => $type->name,
+      'title callback' => 'check_plain',
+      'page callback' => 'fedora_object_add',
+      'page arguments' => array(2),
+      'access arguments' => array('create fedora objects'),
+      'description' => $type->description,
+    );
+  }
+  $items['fedora_object/%fedora_object'] = array(
+    'title callback' => 'fedora_object_page_title',
+    'title arguments' => array(1),
+    'page callback' => 'fedora_object_page_view',
+    'page arguments' => array(1),
+    'access arguments' => array('view fedora objects'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['fedora_object/%fedora_object/view'] = array(
+    'title' => 'View',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+  $items['fedora_object/%fedora_object/edit'] = array(
+    'title' => 'Edit',
+    'page callback' => 'fedora_object_page_edit',
+    'page arguments' => array(1),
+    'access arguments' => array('update fedora objects'),
+    'weight' => 0,
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+  );
+  $items['fedora_object/%fedora_object/delete'] = array(
+    'title' => 'Delete',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('fedora_object_delete_confirm', 1),
+    'access arguments' => array('delete fedora objects'),
+    'weight' => 1,
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_INLINE,
+  );
+  return $items;
+}
+
+function fedora_object_overview_types() {
+  foreach (fedora_object_types() as $type => $info) {
+    $type_url_str = str_replace('_', '-', $type);
+    $label = t('View @type', array('@type' => $info->name));
+    $items[] = l($label, 'admin/structure/fedora_objects/manage/' . $type_url_str);
+  }
+  return theme('item_list', array('items' => $items));
+}
+
+function fedora_object_page_title($fedora_object) {
+  return $fedora_object->title;
+}
+
+function fedora_object_page_edit($fedora_object) {
+  $types = fedora_object_types();
+  
+  drupal_set_title(t('<em>Edit @type</em> %title', array('@type' => $types[$fedora_object->type]->name, 
+                                                                                    '@title' => $fedora_object->title)), PASS_THROUGH);
+  return drupal_get_form($fedora_object->type . '_fedora_object_form', $fedora_object);
+}
+
+function fedora_object_page_view($fedora_object, $view_mode = 'full') {
+  // Remove previously-built content, if it exists.
+  $fedora_object->content = array();
+  
+  if ($view_mode == 'teaser') {
+    $fedora_object->content['title'] = array(
+      '#markup' => filter_xss($fedora_object->title),
+      '#weight' => -5,
+    );
+  }
+  
+  // Build fields content
+  field_attach_prepare_view('fedora_object', array($fedora_object->pid => $fedora_object), $view_mode);
+  entity_prepare_view('fedora_object', array($fedora_object->pid, $fedora_object));
+  $fedora_object->content += field_attach_view('fedora_object', $fedora_object, $view_mode);
+  return $fedora_object->content;
+}
+
+function fedora_object_type_page_title($type) {
+  return t('Manage @type', array('@type', $type->name));
+}
+
+function fedora_object_information($fedora_object_type) {
+  return $fedora_object_type->name . ': ' . $fedora_object_type->description;
+}
+
+function fedora_object_add_page() {
+  $item = menu_get_item();
+  $links = system_admin_menu_block($item);
+  foreach ($links as $link) {
+    $items[] = l($link['title'], $link['href'], $item['localized_options'])
+            . ':' . filter_xss_admin($link['description']);
+  }
+  return theme('item_list', array('items' => $items));
+}
+
+function fedora_object_add($type) {
+  global $user;
+  
+  $types = fedora_object_types();
+  $type = isset($type) ? str_replace('_', '-', $type) : NULL;
+  
+  if (empty($types[$type])) {
+    return MENU_NOT_FOUND;
+  }
+  
+  $fedora_object = entity_get_controller('fedora_object')->create($type);
+  drupal_set_title(t('Create %name', array('%name' => $types[$type]->name)), PASS_THROUGH);
+  return drupal_get_form($type . '_fedora_object_form', $fedora_object);
+}
+
+function fedora_object_forms() {
+  $forms = array();
+  if ($types = fedora_object_types()) {
+    foreach (array_keys($types) as $type) {
+      $forms[$type . 'fedora_object_form']['callback'] = 'fedora_object_form';
+    }
+  }
+  return $forms;
+}
+
+function fedora_object_form($form, &$form_state, $fedora_object) {
+  // Set the id to identify this as a fedora object edit form
+  $form['#id'] = 'fedora-object-form';
+  // Save the fedora object for later, in case we need it.
+  $form['#fedora_object'] = $fedora_object;
+  $form_state['fedora_object'] = $fedora_object;
+  
+  // Common fields. We don't have many.
+  $form['title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Title'),
+    '#default_value' => $fedora_object->title,
+    '#weight' => -5,
+    '#required' => TRUE,
+  );
+  
+  $form['revision'] = array(
+    '#access' => user_access('administer fedora objects'),
+    '#type' => 'checkbox',
+    '#title' => t('Create new revision'),
+    '#default_value' => 0,
+  );
+  
+  // Add the buttons
+  $form['buttons'] = array();
+  $form['buttons']['#weight'] = 100;
+  $form['buttons']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+    '#weight' => 5,
+    '#submit' => array('fedora_object_form_submit'),
+  );
+  if (!empty($fedora_object->pid)) {
+    $form['buttons']['delete'] = array(
+      '#access' => user_access('delete fedora objects'),
+      '#type' => 'submit',
+      '#value' => t('Delete'),
+      '#weight' => 15,
+      '#submit' => 'fedora_object_form_delete_submit',
+    );
+  }
+  
+  $form['#validate'][] = 'fedora_object_form_validate';
+  field_attach_form('fedora_object', $fedora_object, $form, $form_state);
+  return $form;
+}
+
+function fedora_object_delete_confirm($form, &$form_state, $fedora_object) {
+  $form['fedora_object'] = $fedora_object;
+  // Always provide entity id in the same form key as in the entity edit form.
+  $form['pid'] = array(
+    '#type' => 'value',
+    '#value' => $fedora_object->pid,
+  );
+  return confirm_form($form, t('Are you sure you want to delete %title?', array('%title' => $fedora_object->title)),
+          'fedora-object/' . $fedora_object->pid, t('This function cannot be undone.'), t('Delete'), t('Cancel'));
+  
+}
+
+function fedora_object_delete_confirm_submit($form, &$form_state) {
+  if ($form_state['values']['confirm']) {
+    $fedora_object = fedora_object_load($form_state['values']['pid']);
+    fedora_object_delete($form_state['values']['pid']);
+    watchdog('fedora_object', '@type: deleted %title', array('%type' => $fedora_object->type, '%title' => $fedora_object->title));
+    
+    $types = fedora_object_types();
+    drupal_set_message(t('%type %title has been deleted', array('%type' => $fedora_object->type, '%title' => $fedora_object->title)));
+    $form_state['redirect'] = '<front>';
+  }
+}
+
+function fedora_object_form_delete_submit($form, &$form_state) {
+  $destination = array();
+  if (isset($_GET['destination'])) {
+    $destination = drupal_get_destination();
+    unset($_GET['destination']);
+  }
+  $fedora_object = $form['fedora_object'];
+  $form_state['redirect'] = array('fedora_object/' . $fedora_object->pid . '/delete', array('query' => 'destination'));
+}
+
+function fedora_object_form_validate($form, &$form_state) {
+  $fedora_object = $form_state['fedora_object'];
+  
+  // Field validation
+  field_attach_form_validate('fedora_object', $fedora_object, $form, $form_state);
+}
+
+function fedora_object_form_submit($form, &$form_state) {
+  global $user;
+  $fedora_object = $form_state['fedora_object'];
+  
+  // Set the owner id if the object is being created.
+  if (empty($fedora_object->uid)) {
+    $fedora_object->uid = $user->uid;
+  }
+  
+  $fedora_object->title = $form_state['values']['title'];
+  $fedora_object->revision = $form_state['values']['revision'];
+  
+  // Notify field widgets
+  field_attach_submit('fedora_object', $fedora_object, $form, $form_state);
+  
+  // Save the fedora object
+  fedora_object_save($fedora_object);
+  
+  // Notify the user
+  drupal_set_message(t('Fedora object saved.'));
+  $form_state['redirect'] = 'fedora_object/' . $fedora_object->pid;
+}
+
+function fedora_object_delete($pid) {
+  return fedora_object_delete_multiple(array($pid));
+}
+
+function fedora_object_delete_multiple($pids) {
+  return entity_get_controller('fedora_object')->delete($pids);
+}
+
+function fedora_object_save($fedora_object) {
+  return entity_get_controller('fedora_object')->save($fedora_object);
+}
+
