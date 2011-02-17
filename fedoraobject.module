@@ -173,7 +173,7 @@ function fedoraobject_page_title($fedoraobject) {
 function fedoraobject_page_edit($fedoraobject) {
   $types = fedoraobject_types();
   
-  drupal_set_title(t('<em>Edit @type</em> %title', array('@type' => $types[$fedoraobject->type]->name, 
+  drupal_set_title(t('<em>Edit @type</em> @title', array('@type' => $types[$fedoraobject->type]->name, 
                                                                                     '@title' => $fedoraobject->title)), PASS_THROUGH);
   return drupal_get_form($fedoraobject->type . '_fedoraobject_form', $fedoraobject);
 }
@@ -191,7 +191,7 @@ function fedoraobject_page_view($fedoraobject, $view_mode = 'full') {
   
   // Build fields content
   field_attach_prepare_view('fedoraobject', array($fedoraobject->pid => $fedoraobject), $view_mode);
-  entity_prepare_view('fedoraobject', array($fedoraobject->pid, $fedoraobject));
+  entity_prepare_view('fedoraobject', array($fedoraobject->pid => $fedoraobject));
   $fedoraobject->content += field_attach_view('fedoraobject', $fedoraobject, $view_mode);
   return $fedoraobject->content;
 }
@@ -277,7 +277,7 @@ function fedoraobject_form($form, &$form_state, $fedoraobject) {
 }
 
 function fedoraobject_delete_confirm($form, &$form_state, $fedoraobject) {
-  $form['fedoraobject'] = $fedoraobject;
+  $form['#fedoraobject'] = $fedoraobject;
   // Always provide entity id in the same form key as in the entity edit form.
   $form['pid'] = array(
     '#type' => 'value',
@@ -355,5 +355,16 @@ function fedoraobject_delete_multiple($pids) {
 
 function fedoraobject_save($fedoraobject) {
   return entity_get_controller('fedoraobject')->save($fedoraobject);
+}
+
+function fedoraobject_load($pid = NULL, $vid = NULL, $reset = FALSE) {
+  $pids = (isset($pid) ? array($pid) : array());
+  $conditions = (isset($vid) ? array('vid' => $vid) : array());
+  $fedoraobject = fedoraobject_load_multiple($pids, $conditions, $reset);
+  return $fedoraobject ? reset($fedoraobject) : FALSE;
+}
+
+function fedoraobject_load_multiple($pids = array(), $conditions = array(), $reset = FALSE) {
+  return entity_load('fedoraobject', $pids, $conditions, $reset);
 }
 

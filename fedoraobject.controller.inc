@@ -138,15 +138,3 @@ class FedoraObjectController extends DrupalDefaultEntityController {
     $fedoraobject->uid = $temp_uid;
   }
 }
-
-function fedoraobject_load($pid = NULL, $vid = NULL, $reset = FALSE) {
-  $pids = (isset($pid) ? array($pid) : array());
-  $conditions = (isset($vid) ? array('vid' => $vid) : array());
-  $fedoraobject = fedoraobject_load_multiple($pids, $conditions, $reset);
-  return $fedoraobject ? reset($fedoraobject) : FALSE;
-}
-
-function fedoraobject_load_multiple($pids = array(), $conditions = array(), $reset = FALSE) {
-  return entity_load('fedoraobject', $pids, $conditions, $reset);
-}
-
