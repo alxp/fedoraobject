@@ -1,0 +1,12 @@
+; $Id$
+name = Fedora Object Entity
+description = Defines the Drupal entity that represents a Fedora object
+package = Fedora Repository
+version = 7.1dev
+core = 7.x
+
+dependencies[] = fedora_api
+files[] = fedoraobject.module
+files[] = fedoraobject.install
+files[] = fedoraobject.controller.inc
+files[] = fedoraobject.pages.inc
