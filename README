@@ -1,0 +1,5 @@
+This is the beginnings of what I hope to be a Fedora Repository-backed Entity type for Drupal 7.
+
+At the moment I am just putting together the standard, generic SQL-backed entity, and made sure it was fieldable.  Next step is til fill out a FedoraObjectController class that reads from and writes to a Fedora repository for FileField field types.  Non-filefield types can remain in Drupal, to enable easily adding Fivestar, comments, etc to Fedora entities without having to serialize anything you attach to a Fedora object.
+
+I'm very grateful to the authors of Drupal 7 Module Development, https://www.packtpub.com/drupal-7-module-development/book, for the excellent chapter on Entities, whose example code I'm largely working from in this implementation.
