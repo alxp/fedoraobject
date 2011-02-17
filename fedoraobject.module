@@ -14,7 +14,7 @@ function fedoraobject_entity_info() {
     'controller class' => 'FedoraObjectController',
     'base table' => 'fedoraobject',
     'revision table' => 'fedoraobject_revision',
-    'uri_callback' => 'fedoraobject_uri',
+    'uri callback' => 'fedoraobject_uri',
     'fieldable' => TRUE,
     'entity keys' => array(
       'id' => 'pid',
@@ -25,7 +25,7 @@ function fedoraobject_entity_info() {
     'bundle keys' => array(
       'bundle' => 'type',
     ),
-    'static cache' => FALSE,
+    'static cache' => TRUE,
     'bundles' => array(),
     'view modes' => array(
       'full' => array(
@@ -33,18 +33,18 @@ function fedoraobject_entity_info() {
         'custom settings' => FALSE,
       ),
       'teaser' => array(
-        'label' => t('Images'),
+        'label' => t('Teaser'),
         'custom settings' => FALSE,
       ),
     ),
   );
   
   foreach (fedoraobject_types() as $type => $info) {
-    $return['fedoraobject']['bundles']['type'][$type] = array(
+    $return['fedoraobject']['bundles'][$type] = array(
       'label' => $info->name,
       'admin' => array(
         'path' => 'admin/structure/fedoraobjects/manage/%fedoraobject_type',
-        'real_path' => 'admin/structure/fedoraobjects/manage/' .
+        'real path' => 'admin/structure/fedoraobjects/manage/' .
           str_replace('_', '-', $type),
         'bundle argument' => 4,
         'access arguments' => array('administer fedora objects'),
@@ -99,6 +99,7 @@ function fedoraobject_menu() {
     'page callback' => 'fedoraobject_information',
     'page arguments' => array(4),
     'access arguments' => array('administer fedora objects'),
+    'type' => MENU_NORMAL_ITEM,
   );
   $items['admin/structure/fedoraobjects/manage/%fedoraobject_type/view'] = array(
     'title' => 'View',
