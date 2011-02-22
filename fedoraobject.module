@@ -62,7 +62,7 @@ function fedoraobject_entity_info() {
  */
 function fedoraobject_uri($fedoraobject) {
   return array(
-    'path' => 'fedora/object/' . $fedoraobject->foid,
+    'path' => 'fedora/object/' . $fedoraobject->pid,
   );
 }
 
