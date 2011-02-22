@@ -4,7 +4,7 @@ function fedoraobject_schema() {
   $schema['fedoraobject'] = array(
     'description' => 'The base table for Fedora objects',
     'fields' => array(
-      'pid' => array(
+      'foid' => array(
         'description' => 'The primary identifier for a fedora object.',
         'type' => 'serial',
         'unsigned' => TRUE,
@@ -45,16 +45,16 @@ function fedoraobject_schema() {
       ),
     ),
     'unique keys' => array(
-      'pid_vid' => array('pid', 'vid'),
-      'pid' => array('pid'),
+      'foid_vid' => array('foid', 'vid'),
+      'foid' => array('foid'),
     ),
-    'primary_key' => array('pid'),
+    'primary_key' => array('foid'),
   );
   
   $schema['fedoraobject_revision'] = array(
     'description' => 'Stores information about each saved version of a {fedoraobject}.',
     'fields' => array(
-      'pid' => array(
+      'foid' => array(
         'description' => 'The fedora object this version belongs to.',
         'type' => 'int',
         'unsigned' => TRUE,
@@ -82,14 +82,14 @@ function fedoraobject_schema() {
       ),
     ),
     'indexes' => array(
-      'pid' => array('pid'),
+      'foid' => array('foid'),
     ),
     'primary key' => array('vid'),
     'foreign keys' => array(
       'fedoraobject' => array(
         'table' => 'fedoraobject',
         'columns' => array(
-          'pid' => 'pid',
+          'foid' => 'foid',
         ),
       ),
     ),

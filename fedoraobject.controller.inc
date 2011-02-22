@@ -8,22 +8,22 @@
 class FedoraObjectController extends DrupalDefaultEntityController {
   public function create($type = '') {
     return (object) array(
-      'pid' => '',
+      'foid' => '',
       'type' => $type,
       'title' => '',
     );
   }
   
-  public function delete($pids) {
-    if (!empty($pids)) {
-      $fedoraobjects = $this->load($pids, array());
+  public function delete($foids) {
+    if (!empty($foids)) {
+      $fedoraobjects = $this->load($foids, array());
       $transaction = db_transaction();
       
       try {
         db_delete('fedoraobject')
-          ->condition('pid', $pids, 'IN')
+          ->condition('foid', $foids, 'IN')
           ->execute();
-        foreach($fedoraobjects as $fedoraobject_pid => $fedoraobject) {
+        foreach($fedoraobjects as $fedoraobject_foid => $fedoraobject) {
           field_attach_delete('fedoraobject', $fedoraobject);
         }
         
@@ -46,13 +46,12 @@ class FedoraObjectController extends DrupalDefaultEntityController {
   }
   
   public function save($fedoraobject) {
-    $transaction = db_transaction();
-    
+   $transaction = db_transaction();
     try {
       global $user;
       
       // Determine if we are inserting a new fedora object.
-      $fedoraobject->is_new = empty($fedoraobject->pid);
+      $fedoraobject->is_new = empty($fedoraobject->foid);
       
       // Set the timestamp fields
       if (empty($fedoraobject->created)) {
@@ -71,7 +70,7 @@ class FedoraObjectController extends DrupalDefaultEntityController {
         unset($fedoraobject->vid);
       }
       
-      // If this is a new artwork
+      // If this is a new fedora object
       if ($fedoraobject->is_new) {
         // Save the new fedora object
         drupal_write_record('fedoraobject', $fedoraobject);
@@ -82,7 +81,7 @@ class FedoraObjectController extends DrupalDefaultEntityController {
       }
       else {
         // Save the updated fedora object.
-        drupal_write_record('fedoraobject', $fedoraobject, 'pid');
+        drupal_write_record('fedoraobject', $fedoraobject, 'foid');
         if (!empty($fedoraobject->revision)) {
           $this->saveRevision($fedoraobject, $user->uid);
         }
@@ -98,7 +97,7 @@ class FedoraObjectController extends DrupalDefaultEntityController {
       if ($update_fedoraobject) {
         db_update('fedoraobject')
           ->fields(array('vid' => $fedoraobject->vid))
-          ->condition('pid', $fedoraobject->pid)
+          ->condition('foid', $fedoraobject->foid)
           ->execute();
       }
       // Save fields.
@@ -122,7 +121,7 @@ class FedoraObjectController extends DrupalDefaultEntityController {
   }
   
   function saveRevision($fedoraobject, $uid, $update = FALSE) {
-    // Hold on to the original artwork's creator_uid but swap
+    // Hold on to the original fedora object's creator_uid but swap
     // but swap in the revision's creator_uid for the momentary update
     $temp_uid = $fedoraobject->uid;
     $fedoraobject->uid = $uid;

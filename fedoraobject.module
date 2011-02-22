@@ -17,7 +17,7 @@ function fedoraobject_entity_info() {
     'uri callback' => 'fedoraobject_uri',
     'fieldable' => TRUE,
     'entity keys' => array(
-      'id' => 'pid',
+      'id' => 'foid',
       'revision' => 'vid',
       'bundle' => 'type',
       'label' => 'title',
@@ -62,7 +62,7 @@ function fedoraobject_entity_info() {
  */
 function fedoraobject_uri($fedoraobject) {
   return array(
-    'path' => 'fedora/object/' . $fedoraobject->pid,
+    'path' => 'fedora/object/' . $fedoraobject->foid,
   );
 }
 
@@ -191,8 +191,8 @@ function fedoraobject_page_view($fedoraobject, $view_mode = 'full') {
   }
   
   // Build fields content
-  field_attach_prepare_view('fedoraobject', array($fedoraobject->pid => $fedoraobject), $view_mode);
-  entity_prepare_view('fedoraobject', array($fedoraobject->pid => $fedoraobject));
+  field_attach_prepare_view('fedoraobject', array($fedoraobject->foid => $fedoraobject), $view_mode);
+  entity_prepare_view('fedoraobject', array($fedoraobject->foid => $fedoraobject));
   $fedoraobject->content += field_attach_view('fedoraobject', $fedoraobject, $view_mode);
   return $fedoraobject->content;
 }
@@ -262,7 +262,7 @@ function fedoraobject_form($form, &$form_state, $fedoraobject) {
     '#weight' => 5,
     '#submit' => array('fedoraobject_form_submit'),
   );
-  if (!empty($fedoraobject->pid)) {
+  if (!empty($fedoraobject->foid)) {
     $form['buttons']['delete'] = array(
       '#access' => user_access('delete fedora objects'),
       '#type' => 'submit',
@@ -280,19 +280,19 @@ function fedoraobject_form($form, &$form_state, $fedoraobject) {
 function fedoraobject_delete_confirm($form, &$form_state, $fedoraobject) {
   $form['#fedoraobject'] = $fedoraobject;
   // Always provide entity id in the same form key as in the entity edit form.
-  $form['pid'] = array(
+  $form['foid'] = array(
     '#type' => 'value',
-    '#value' => $fedoraobject->pid,
+    '#value' => $fedoraobject->foid,
   );
   return confirm_form($form, t('Are you sure you want to delete %title?', array('%title' => $fedoraobject->title)),
-          'fedoraobject/' . $fedoraobject->pid, t('This function cannot be undone.'), t('Delete'), t('Cancel'));
+          'fedoraobject/' . $fedoraobject->foid, t('This function cannot be undone.'), t('Delete'), t('Cancel'));
   
 }
 
 function fedoraobject_delete_confirm_submit($form, &$form_state) {
   if ($form_state['values']['confirm']) {
-    $fedoraobject = fedoraobject_load($form_state['values']['pid']);
-    fedoraobject_delete($form_state['values']['pid']);
+    $fedoraobject = fedoraobject_load($form_state['values']['foid']);
+    fedoraobject_delete($form_state['values']['foid']);
     watchdog('fedoraobject', '@type: deleted %title', array('%type' => $fedoraobject->type, '%title' => $fedoraobject->title));
     
     $types = fedoraobject_types();
@@ -308,7 +308,7 @@ function fedoraobject_form_delete_submit($form, &$form_state) {
     unset($_GET['destination']);
   }
   $fedoraobject = $form['fedoraobject'];
-  $form_state['redirect'] = array('fedoraobject/' . $fedoraobject->pid . '/delete', array('query' => 'destination'));
+  $form_state['redirect'] = array('fedoraobject/' . $fedoraobject->foid . '/delete', array('query' => 'destination'));
 }
 
 function fedoraobject_form_validate($form, &$form_state) {
@@ -343,29 +343,29 @@ function fedoraobject_form_submit($form, &$form_state) {
   else {
     drupal_set_message(t('Fedora object saved.'));
   }
-  $form_state['redirect'] = 'fedoraobject/' . $fedoraobject->pid;
+  $form_state['redirect'] = 'fedoraobject/' . $fedoraobject->foid;
 }
 
-function fedoraobject_delete($pid) {
-  return fedoraobject_delete_multiple(array($pid));
+function fedoraobject_delete($foid) {
+  return fedoraobject_delete_multiple(array($foid));
 }
 
-function fedoraobject_delete_multiple($pids) {
-  return entity_get_controller('fedoraobject')->delete($pids);
+function fedoraobject_delete_multiple($foids) {
+  return entity_get_controller('fedoraobject')->delete($foids);
 }
 
 function fedoraobject_save($fedoraobject) {
   return entity_get_controller('fedoraobject')->save($fedoraobject);
 }
 
-function fedoraobject_load($pid = NULL, $vid = NULL, $reset = FALSE) {
-  $pids = (isset($pid) ? array($pid) : array());
+function fedoraobject_load($foid = NULL, $vid = NULL, $reset = FALSE) {
+  $foids = (isset($foid) ? array($foid) : array());
   $conditions = (isset($vid) ? array('vid' => $vid) : array());
-  $fedoraobject = fedoraobject_load_multiple($pids, $conditions, $reset);
+  $fedoraobject = fedoraobject_load_multiple($foids, $conditions, $reset);
   return $fedoraobject ? reset($fedoraobject) : FALSE;
 }
 
-function fedoraobject_load_multiple($pids = array(), $conditions = array(), $reset = FALSE) {
-  return entity_load('fedoraobject', $pids, $conditions, $reset);
+function fedoraobject_load_multiple($foids = array(), $conditions = array(), $reset = FALSE) {
+  return entity_load('fedoraobject', $foids, $conditions, $reset);
 }
 
