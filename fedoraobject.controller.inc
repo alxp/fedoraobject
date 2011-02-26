@@ -6,11 +6,12 @@
  */
 
 class FedoraObjectController extends DrupalDefaultEntityController {
-  public function create($type = '') {
+  public function create($type = '', $pid = '', $title = '') {
     return (object) array(
       'foid' => '',
+      'pid' => $pid,
       'type' => $type,
-      'title' => '',
+      'title' => $title,
     );
   }
   
@@ -43,6 +44,48 @@ class FedoraObjectController extends DrupalDefaultEntityController {
     }
     
     return TRUE;
+  }
+  
+  public function load($ids = array(), $conditions = array()) {
+    module_load_include('module', 'fedora_api');
+    // Get the foids for any $ids that are PID strings.
+    $pids = array();
+    $foids = array();
+    $ids_to_remove = array();
+    $new_fedoraobjects = array();
+    for ($i = 0; $i < count($ids); $i++) {
+      if (!is_numeric($ids[$i]) && fedora_api_valid_pid($ids[$i])) {
+        $pids[] = $ids[$i];
+        $ids_to_remove[] = $i;
+      }
+    }
+    
+    foreach($ids_to_remove as $id) {
+      unset($ids[$id]);
+    }
+
+    if (!empty($pids)) {
+      $found_pids = array();
+      // Get the objects by PID
+      $select = db_select('fedoraobject', 'e')
+                      ->fields('e', array('foid', 'pid'))
+                      ->condition('pid', $pids, 'IN')
+                      ->execute();
+      while ($res = $select->fetchAssoc()) {
+        $foids[] = $res['foid'];
+        $found_pids[] = $res['pid'];
+      }
+      $remaining_pids = array_diff($pids, $found_pids);
+      $new_foids = array();
+      
+      foreach ($remaining_pids as $remaining_pid) {
+        $new_fedoraobjects[] = $this->createFedoraObjectForPid($remaining_pid);
+      }
+      
+      $ids = array_merge($ids, $foids);
+    }
+    
+    return array_merge(parent::load($ids, $conditions), $new_fedoraobjects);
   }
   
   public function save($fedoraobject) {
@@ -135,5 +178,19 @@ class FedoraObjectController extends DrupalDefaultEntityController {
     
     // Reset the fedora object's creator_uid to the original value.
     $fedoraobject->uid = $temp_uid;
+  }
+  
+  protected function createFedoraObjectForPid($pid) {
+    module_load_include('inc', 'fedora_api', 'fedora_api.client');
+    $fedora_client = new FedoraClient();
+    $results = $fedora_client->findObjects(NULL, "pid=$pid");
+    
+    $new_fedoraobject = NULL;
+    if (isset($results[$pid])) {
+      $result = $results[$pid];
+      $new_fedoraobject = $this->create('generic', $pid, $result['title']);
+    }
+    
+    return $new_fedoraobject;
   }
 }
